@@ -1,4 +1,5 @@
 import utils
+from collections import defaultdict
 
 class Result:
 
@@ -93,10 +94,32 @@ class Result:
 
         return vars
 
-    def map(self, filter):
+    def map(self, mapper):
         result = Result(self.conf)
-        result.data = { k : filter(v) for k, v in sorted(self.data.items()) }
+        data = defaultdict(list)
+        # Map: generate many (k, v)
+        for k, v in sorted(self.data.items()):
+            output = mapper(k, v)
+            for kk, vv in output:
+                data[kk].append(vv)
+
+        result.data = dict(data)
         return result
+
+    def reduce(self, reducer):
+        result = Result(self.conf)
+        result.data = {}
+        for k, v in sorted(self.data.items()):
+            output = reducer(k, v)
+            result.data[output[0]] = output[1]
+
+        return result
+
+    def mapv(self, mapper):
+        return self.map(lambda k, v: [(k, mv) for mv in mapper(v)])
+
+    def reducev(self, reducer):
+        return self.reduce(lambda k, v: (k, reducer(v)))
 
     def squeeze(self):
         # delete singleton variables except name
