@@ -1,0 +1,38 @@
+#!/usr/bin/env python
+import argparse, json, time
+from dir import Dir
+from result import Result
+import utils
+
+parser = argparse.ArgumentParser(description="Do an experiment")
+parser.add_argument('config', metavar='config', type=str, help='config file')
+args = parser.parse_args() 
+
+# Load config file
+f = open(args.config, 'r')
+conf = json.loads(f.read())
+f.close()
+
+# TODO: check config file
+# name cannot contain - or illegal characters for path
+# no variable can be called "name"
+
+d = Dir(conf)
+res = d.get_result()
+
+for arg in res.args():
+    #print 'Start ' + d.arg_id(arg)
+    d.start(arg)
+
+d.refresh()
+d.write_status(cr = False)
+
+# Main event loop
+while True:
+    d.refresh()
+    d.write_status()
+    time.sleep(1)
+    
+    if d.finished_tasks == d.total_tasks:
+        print ''
+        break

@@ -1,0 +1,83 @@
+#!/usr/bin/env python
+import argparse, json, os, glob, uuid, threading, subprocess, utils, time, random
+
+def main():
+    parser = argparse.ArgumentParser(description="Do an experiment")
+    parser.add_argument('config', metavar='config', type=str, help='config file')
+    args = parser.parse_args() 
+    
+    # Load config file
+    f = open(args.config, 'r')
+    conf = json.loads(f.read())
+    f.close()
+    
+    # Chdir
+    os.chdir(conf["name"])
+    
+    # Event loop
+    all_finished = False
+    while not all_finished:
+        all_finished = True
+        files = glob.glob('*.todo')
+        random.shuffle(files)
+        for file in files:
+            file = file[:-5]
+            if utils.unallocated_task(file):
+                work(file, conf)
+            if not utils.finished(file):
+                all_finished = False
+
+        time.sleep(1)
+
+def worker_thread(arg, file_name, conf):
+    print 'Start ' + file_name
+    stdout_file = '../' + file_name
+
+    # Substitute arguments
+    command = conf["command"][:]
+    for i, argv in enumerate(command):
+        for key, value in arg:
+            command[i] = command[i].replace('$' + key, str(value))
+
+    fout = open(stdout_file, 'w')
+    subprocess.call(command, stdout=fout)
+    fout.close()
+    print 'Finish ' + file_name
+
+def work(file_name, conf):
+    utils.heartbeat(file_name)
+    # Initialize task
+    work_dir = file_name + '-' + str(uuid.uuid4())
+    os.mkdir(work_dir)
+    os.chdir(work_dir)
+
+    # Spawn worker thread
+    f = open('../' + file_name + '.todo', 'r')
+    arg = json.loads(f.read())
+    f.close()
+    worker = threading.Thread(target=worker_thread, args=(arg, file_name, conf))
+    worker.start()
+
+    start = True
+
+    # Main loop
+    while True:
+        # Heart beat every 1 second
+        utils.heartbeat('../' + file_name)
+        if not worker.is_alive():
+            break
+
+        if not start:
+            time.sleep(1)
+        else:
+            start = True
+
+    # Join should be finish instantly
+    worker.join()
+
+    # Create finish tag
+    os.chdir('..')
+    utils.finish(file_name)
+
+if __name__ == "__main__":
+    main()
