@@ -30,18 +30,29 @@ def main():
         time.sleep(1)
 
 def worker_thread(arg, file_name, conf):
+    myarg = arg[:]	
     print 'Start ' + file_name
     stdout_file = '../' + file_name
+
+    # Handle file output
+    is_file_output = False
+    if "output" in conf and conf["output"] == "file":
+        myarg.append( ("output", stdout_file) )
+	is_file_output = True
 
     # Substitute arguments
     command = conf["command"][:]
     for i, argv in enumerate(command):
-        for key, value in arg:
+        for key, value in myarg:
             command[i] = command[i].replace('$' + key, str(value))
 
-    fout = open(stdout_file, 'w')
-    subprocess.call(command, stdout=fout)
-    fout.close()
+    if not is_file_output:
+        fout = open(stdout_file, 'w')
+        subprocess.call(command, stdout=fout)
+        fout.close()
+    else:
+        subprocess.call(command)
+
     print 'Finish ' + file_name
 
 def work(file_name, conf):
