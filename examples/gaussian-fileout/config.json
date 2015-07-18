@@ -7,5 +7,5 @@
 
     "output": "file",
 
-    "command": ["python", "/home/lijm/jianfei/experiments/examples/gaussian/gaussian.py", "$n", "$output"]
+    "command": ["python", "/home/lijm/jianfei/experiments/examples/gaussian-fileout/gaussian.py", "$n", "$output"]
 }
