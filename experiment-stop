@@ -1,0 +1,12 @@
+#!/usr/bin/env python
+import argparse, json, time, utils
+
+parser = argparse.ArgumentParser(description="Stop an experiment")
+parser.add_argument('config', metavar='config', type=str, help='config file')
+args = parser.parse_args() 
+
+# Load config file
+f = open(args.config, 'r')
+conf = json.loads(f.read())
+
+utils.touch(conf["name"] + "/allfinished") 
