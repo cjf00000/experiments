@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-import argparse, json, os, glob, uuid, threading, subprocess, utils, time, random
+import argparse, json, os, glob, uuid, threading, subprocess, utils, time, random, sys
 from lockfile import LockFile
 
 def main():
@@ -92,6 +92,9 @@ def work(file_name, conf):
 
     # Main loop
     while True:
+        if os.path.exists('../allfinished'):
+            sys.exit(0)
+            
         # Heart beat every 1 second
         utils.heartbeat('../' + file_name)
         if not worker.is_alive():
