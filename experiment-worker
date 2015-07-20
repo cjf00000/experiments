@@ -48,7 +48,7 @@ def main():
 
         time.sleep(1)
 
-def worker_thread(arg, file_name, conf):
+def worker_thread(arg, file_name, conf, proc):
     myarg = arg[:]	
     print 'Start ' + file_name
     stdout_file = '../' + file_name
@@ -67,10 +67,12 @@ def worker_thread(arg, file_name, conf):
 
     if not is_file_output:
         fout = open(stdout_file, 'w')
-        subprocess.call(command, stdout=fout)
+        proc[0] = subprocess.Popen(command, stdout=fout)
         fout.close()
     else:
-        subprocess.call(command)
+        proc[0] = subprocess.Popen(command)
+
+    proc[0].wait()
 
     print 'Finish ' + file_name
 
@@ -85,7 +87,8 @@ def work(file_name, conf):
     f = open('../' + file_name + '.todo', 'r')
     arg = json.loads(f.read())
     f.close()
-    worker = threading.Thread(target=worker_thread, args=(arg, file_name, conf))
+    proc = [0]
+    worker = threading.Thread(target=worker_thread, args=(arg, file_name, conf, proc))
     worker.start()
 
     start = True
@@ -93,6 +96,8 @@ def work(file_name, conf):
     # Main loop
     while True:
         if os.path.exists('../allfinished'):
+            print 'Received stop signal, terminating...'
+            proc[0].terminate()
             sys.exit(0)
             
         # Heart beat every 1 second
