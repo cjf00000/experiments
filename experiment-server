@@ -3,7 +3,49 @@ import argparse, json, time
 from dir import Dir
 from result import Result
 import utils
+from lockfile import LockFile
+import os
 
+def initialize_tasks(d, res):
+    tasks_path = "tasks"
+    if os.path.exists(tasks_path + '.finished'):
+        return
+
+    lock = LockFile(tasks_path)
+    lock.acquire()
+    f = open(tasks_path, 'w')
+    for arg in res.args():
+        f.write(d.arg_id(arg) + '\n')
+        d.start(arg)
+    f.close()
+    lock.release()
+
+    utils.touch(tasks_path + '.finished')
+
+def build_tasks(d, res):
+    tasks_path = "tasks"
+    
+    # Build a list of dead tasks
+    dead_tasks = []
+    for arg in res.args():
+        if utils.dead(d.arg_id(arg)):
+            dead_tasks.append(arg)
+
+    lock = LockFile(tasks_path)
+    lock.acquire()
+    f = open(tasks_path, 'a')
+    for arg in dead_tasks:
+        arg_id = d.arg_id(arg)
+        try:
+            os.remove(arg_id + '.alive')
+        except:
+            pass
+        f.write(arg_id + '\n')
+        print 'Find dead job ' + arg_id + ', restarting'
+
+    f.close()
+    lock.release()
+    
 parser = argparse.ArgumentParser(description="Do an experiment")
 parser.add_argument('config', metavar='config', type=str, help='config file')
 args = parser.parse_args() 
@@ -20,9 +62,10 @@ f.close()
 d = Dir(conf)
 res = d.get_result()
 
-for arg in res.args():
-    #print 'Start ' + d.arg_id(arg)
-    d.start(arg)
+if d.finished_tasks == d.total_tasks:
+    print 'This experiment is already finished. Remove the folder %s if you want to rerun.' % conf["name"]
+
+initialize_tasks(d, res)
 
 d.refresh()
 d.write_status(cr = False)
@@ -31,8 +74,10 @@ d.write_status(cr = False)
 while True:
     d.refresh()
     d.write_status()
+    build_tasks(d, res)
     time.sleep(1)
     
     if d.finished_tasks == d.total_tasks:
         print ''
+        utils.allfinish()
         break

@@ -35,9 +35,28 @@ def failed(file_name):
 def heartbeat(file_name):
     touch(file_name + '.alive')
 
+def dead(file_name):
+    if not os.path.exists(file_name + '.alive'):
+        return False
+
+    if os.path.exists(file_name + '.finished'):
+        return False
+
+    touch('current')
+    if os.path.getmtime('current') - os.path.getmtime(file_name + '.alive') > 10:
+        # Heartbeat timeout
+        return True
+    else:
+        return False
+
 def finish(file_name):
     touch(file_name + '.finished')
 
 def fail(file_name):
     touch(file_name + '.fail')
 
+def allfinish():
+    touch('allfinished')
+
+def allfinished():
+    return os.path.exists('allfinished')
